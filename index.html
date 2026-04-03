@@ -1,0 +1,797 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>制度PL × 変動PL 連動可視化ツール</title>
+  <style>
+    :root {
+      --blue: #2b73b6;
+      --light-blue: #eaf5fc;
+      --red: #d93636;
+      --text: #2d3748;
+      --muted: #718096;
+      --shadow: 0 10px 25px rgba(0,0,0,.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #f8fbff 0%, #eef4f8 100%);
+    }
+
+    .wrap {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(24px, 2.4vw, 36px);
+      color: #1f4f7d;
+    }
+
+    .lead {
+      margin: 0 0 14px;
+      color: #51606f;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .toolbar {
+      background: rgba(255,255,255,.94);
+      border: 1px solid #d6e6f3;
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+
+    .toolbar-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(260px, 1fr));
+      gap: 14px;
+      align-items: end;
+    }
+
+    .control {
+      display: grid;
+      gap: 8px;
+    }
+
+    .control label {
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .value-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: var(--light-blue);
+      color: var(--blue);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      border: 1px solid #c9e2f3;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--blue);
+      cursor: pointer;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--blue);
+      color: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    button.secondary {
+      background: #e8f2fa;
+      color: #1f4f7d;
+    }
+
+    .canvas-wrap {
+      background: #f8fbfe;
+      border-radius: 22px;
+      border: 1px solid #d6e6f3;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .boards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      padding: 14px 16px 16px;
+      align-items: start;
+    }
+
+    .board-block-title {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 900;
+      color: #4e5660;
+      margin: 4px 0 10px;
+    }
+
+    .pl {
+      background: rgba(255,255,255,.96);
+      border: 2px solid #75b0da;
+      border-radius: 12px;
+      padding: 18px 20px 16px;
+      min-height: 620px;
+    }
+
+    .pl.right {
+      background: #edf7ff;
+    }
+
+    .pl-head {
+      text-align: center;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .pl-title {
+      font-size: 24px;
+      font-weight: 900;
+      text-decoration: underline;
+      text-underline-offset: 5px;
+      line-height: 1.25;
+      padding: 0 86px;
+    }
+
+    .pl-unit {
+      position: absolute;
+      right: 0;
+      top: 4px;
+      color: #5f6f7d;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .pl-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 6px;
+    }
+
+    .pl-table td {
+      vertical-align: middle;
+      font-size: 18px;
+      line-height: 1.25;
+      padding: 2px 0;
+    }
+
+    .roman {
+      width: 44px;
+      font-size: 20px !important;
+      font-weight: 900;
+      color: #4d5965;
+    }
+
+    .roman.red, .name.red, .amt.red {
+      color: var(--red);
+      font-weight: 900;
+    }
+
+    .roman.blue, .name.blue, .amt.blue {
+      color: #2b42dc;
+      font-weight: 900;
+    }
+
+    .name {
+      padding-right: 8px;
+      white-space: nowrap;
+    }
+
+    .amt {
+      width: 120px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .pct {
+      width: 74px;
+      text-align: right;
+      color: #5f6f7d;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      padding-left: 8px;
+    }
+
+    .pct.red {
+      color: var(--red);
+      font-weight: 800;
+    }
+
+    .item-row {
+      border-radius: 10px;
+    }
+
+    .item-row.active .name,
+    .item-row.active .amt {
+      background: rgba(255, 238, 121, .45);
+      box-shadow: 0 0 0 6px rgba(255,238,121,.18);
+      border-radius: 8px;
+    }
+
+    .pl-table tr.changed td.roman,
+    .pl-table tr.changed td.name,
+    .pl-table tr.changed td.amt {
+      background: rgba(255, 238, 121, .45);
+      box-shadow: 0 0 0 6px rgba(255, 238, 121, .18);
+      border-radius: 8px;
+      transition: background-color .18s ease, box-shadow .18s ease;
+    }
+
+    .pl-table tr.changed .total-line {
+      background: rgba(255, 238, 121, .45);
+      border-radius: 8px;
+      padding: 6px 8px 2px;
+    }
+
+    .section-total td {
+      padding-top: 8px;
+    }
+
+    .total-line {
+      border-top: 2px solid #8a96a3;
+      display: inline-block;
+      min-width: 110px;
+      padding-top: 6px;
+      text-align: right;
+    }
+
+    .grand-total .total-line {
+      border-top-width: 3px;
+      border-bottom: 4px double #8a96a3;
+      padding-bottom: 3px;
+    }
+
+    .totallabel {
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      color: #5b6977;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,.85);
+      border: 1px solid #dbe9f4;
+      border-radius: 999px;
+      padding: 7px 10px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot.yellow { background: rgba(255, 200, 0, .9); }
+    .dot.red { background: var(--red); }
+
+    .footnote {
+      margin-top: 14px;
+      color: #5f6f7d;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 1180px) {
+      .boards,
+      .toolbar-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .boards {
+        gap: 14px;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .wrap { padding: 12px; }
+      .pl { padding: 16px 14px 18px; }
+      .pl-table td { font-size: 16px; }
+      .amt { width: 110px; }
+      .name { white-space: normal; }
+      .pl-title { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>制度PL × 変動PL 連動可視化ツール</h1>
+    <p class="lead">
+      制度会計ベースの損益計算書と、変動費・固定費に組み替えた変動損益計算書を横に並べ、
+      売上高や目標経常利益を動かしたときに、どの科目がどう連動するかを一目で確認できる試作版です。
+    </p>
+
+    <div class="toolbar">
+      <div class="toolbar-grid">
+        <div class="control">
+          <label for="salesRange">売上高（千円）</label>
+          <div class="value-chip" id="salesValue">289,322</div>
+          <input id="salesRange" type="range" min="100000" max="500000" step="1000" value="289322" />
+        </div>
+
+        <div class="control">
+          <label for="profitRange">目標経常利益（千円）</label>
+          <div class="value-chip" id="profitValue">32,879</div>
+          <input id="profitRange" type="range" min="-30000" max="120000" step="1000" value="32879" />
+        </div>
+      </div>
+
+      <div class="toolbar-actions">
+        <button id="resetBtn" type="button">初期値に戻す</button>
+        <button id="animateBtn" type="button" class="secondary">売上を自動で動かす</button>
+      </div>
+    </div>
+
+    <div class="canvas-wrap" id="canvasWrap">
+      <div class="boards">
+        <div class="board-col">
+          <div class="pl left" id="leftBoard">
+            <div class="pl-head">
+              <div class="pl-title">制度会計上の損益計算書</div>
+              <div class="pl-unit">（千円）</div>
+            </div>
+            <table class="pl-table">
+              <tbody>
+                <tr>
+                  <td class="roman">I</td>
+                  <td class="name totallabel">売上高</td>
+                  <td class="amt"><span class="amt red" id="l-sales">289,322</span></td>
+                </tr>
+
+                <tr><td class="roman">II</td><td class="name totallabel">売上原価</td><td class="amt"></td></tr>
+                <tr class="item-row linkable" data-link="shohin"><td></td><td class="name">商品仕入高</td><td class="amt" id="l-shohin">4,663</td></tr>
+                <tr class="item-row linkable" data-link="zairyo"><td></td><td class="name">材料費</td><td class="amt" id="l-zairyo">57,187</td></tr>
+                <tr class="item-row linkable" data-link="genka-jinken"><td></td><td class="name">人件費</td><td class="amt" id="l-genka-jinken">44,120</td></tr>
+                <tr class="item-row linkable" data-link="gaichu"><td></td><td class="name">外注費</td><td class="amt" id="l-gaichu">82,905</td></tr>
+                <tr class="item-row linkable" data-link="genka-shokyaku"><td></td><td class="name">減価償却費</td><td class="amt" id="l-genka-shokyaku">1,765</td></tr>
+                <tr class="item-row linkable" data-link="shomohin"><td></td><td class="name">消耗品費</td><td class="amt" id="l-shomohin">1,544</td></tr>
+                <tr class="item-row"><td></td><td class="name">修繕費他</td><td class="amt" id="l-shuzen">12,113</td></tr>
+                <tr class="section-total">
+                  <td></td><td></td><td class="amt"><span class="total-line" id="l-cogs">204,297</span></td>
+                </tr>
+                <tr>
+                  <td class="roman">III</td>
+                  <td class="name totallabel">売上総利益</td>
+                  <td class="amt"><span class="total-line" id="l-gp">85,025</span></td>
+                  <td class="pct" id="l-gp-pct">29.4%</td>
+                </tr>
+
+                <tr><td class="roman">IV</td><td class="name totallabel">販売管理費</td><td class="amt"></td></tr>
+                <tr class="item-row linkable" data-link="keihi-jinken"><td></td><td class="name">人件費</td><td class="amt" id="l-keihi-jinken">33,128</td></tr>
+                <tr class="item-row linkable" data-link="hanbai"><td></td><td class="name">販売費</td><td class="amt" id="l-hanbai">4,605</td></tr>
+                <tr class="item-row linkable" data-link="keihi-shokyaku"><td></td><td class="name">減価償却費</td><td class="amt" id="l-keihi-shokyaku">2,048</td></tr>
+                <tr class="item-row linkable" data-link="sonota-fixed"><td></td><td class="name">その他経費</td><td class="amt" id="l-sonota-keihi">12,365</td></tr>
+                <tr class="section-total">
+                  <td></td><td></td><td class="amt"><span class="total-line" id="l-sga">52,146</span></td>
+                </tr>
+                <tr>
+                  <td class="roman">V</td>
+                  <td class="name totallabel">経常利益</td>
+                  <td class="amt grand-total"><span class="total-line" id="l-op">32,879</span></td>
+                  <td class="pct red" id="l-op-pct">11.4%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="board-col">
+          <div class="pl right" id="rightBoard">
+            <div class="pl-head">
+              <div class="pl-title">変動損益計算書</div>
+              <div class="pl-unit">（千円）</div>
+            </div>
+            <table class="pl-table">
+              <tbody>
+                <tr>
+                  <td class="roman red">I</td>
+                  <td class="name red totallabel">売上高</td>
+                  <td class="amt"><span class="amt red" id="r-sales">289,322</span></td>
+                </tr>
+
+                <tr><td class="roman blue">II</td><td class="name blue totallabel">変動費</td><td class="amt"></td></tr>
+                <tr class="item-row linkable" data-link="shohin"><td></td><td class="name blue">商品仕入高</td><td class="amt blue" id="r-shohin">4,663</td></tr>
+                <tr class="item-row linkable" data-link="zairyo"><td></td><td class="name blue">材料費</td><td class="amt blue" id="r-zairyo">57,187</td></tr>
+                <tr class="item-row linkable" data-link="gaichu"><td></td><td class="name blue">外注費</td><td class="amt blue" id="r-gaichu">82,905</td></tr>
+                <tr class="item-row linkable" data-link="shomohin"><td></td><td class="name blue">消耗品費</td><td class="amt blue" id="r-shomohin">1,544</td></tr>
+                <tr class="section-total">
+                  <td></td><td></td><td class="amt"><span class="total-line blue" id="r-var">146,299</span></td>
+                </tr>
+
+                <tr>
+                  <td class="roman red">III</td>
+                  <td class="name red totallabel">限界利益</td>
+                  <td class="amt"><span class="total-line red" id="r-cm">143,023</span></td>
+                  <td class="pct red" id="r-cm-pct">49.4%</td>
+                </tr>
+
+                <tr><td class="roman">IV</td><td class="name totallabel">固定費</td><td class="amt"></td></tr>
+                <tr class="item-row linkable" data-link="genka-jinken"><td></td><td class="name">人件費（原価）</td><td class="amt" id="r-genka-jinken">44,120</td></tr>
+                <tr class="item-row linkable" data-link="keihi-jinken"><td></td><td class="name">人件費（経費）</td><td class="amt" id="r-keihi-jinken">33,128</td></tr>
+                <tr class="item-row linkable" data-link="hanbai"><td></td><td class="name">販売費</td><td class="amt" id="r-hanbai">4,605</td></tr>
+                <tr class="item-row linkable" data-link="genka-shokyaku"><td></td><td class="name">償却費（原価）</td><td class="amt" id="r-genka-shokyaku">1,765</td></tr>
+                <tr class="item-row linkable" data-link="keihi-shokyaku"><td></td><td class="name">償却費（経費）</td><td class="amt" id="r-keihi-shokyaku">2,048</td></tr>
+                <tr class="item-row linkable" data-link="sonota-fixed"><td></td><td class="name">その他固定費</td><td class="amt" id="r-sonota-fixed">24,478</td></tr>
+                <tr class="section-total">
+                  <td></td><td></td><td class="amt"><span class="total-line" id="r-fixed">110,144</span></td>
+                </tr>
+
+                <tr>
+                  <td class="roman red">V</td>
+                  <td class="name red totallabel">経常利益</td>
+                  <td class="amt grand-total"><span class="total-line red" id="r-op">32,879</span></td>
+                  <td class="pct red" id="r-op-pct">11.4%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><i class="dot yellow"></i>動いた科目は一時ハイライト</span>
+      <span><i class="dot red"></i>赤字は売上・限界利益・経常利益など重要指標</span>
+    </div>
+
+    <p class="footnote">
+      ※ 現在の試作版では、添付画像に基づき「変動費は売上に比例」「固定費は原則一定」という前提で動かしています。<br>
+      ※ 「修繕費他 12,113」は変動PL側では「その他固定費」に吸収させています（画像の 24,478 の内数の一部として扱う構成）。
+    </p>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const base = {
+        sales: 289322,
+        variable: {
+          shohin: 4663,
+          zairyo: 57187,
+          gaichu: 82905,
+          shomohin: 1544,
+        },
+        fixed: {
+          genkaJinken: 44120,
+          keihiJinken: 33128,
+          hanbai: 4605,
+          genkaShokyaku: 1765,
+          keihiShokyaku: 2048,
+          sonotaFixed: 24478,
+        },
+        seidoOther: {
+          shuzen: 12113,
+          sonotaKeihi: 12365,
+        }
+      };
+
+      const ids = {
+        salesRange: document.getElementById('salesRange'),
+        profitRange: document.getElementById('profitRange'),
+        salesValue: document.getElementById('salesValue'),
+        profitValue: document.getElementById('profitValue'),
+        canvasWrap: document.getElementById('canvasWrap'),
+        resetBtn: document.getElementById('resetBtn'),
+        animateBtn: document.getElementById('animateBtn')
+      };
+
+      function fmt(n) {
+        return Math.round(n).toLocaleString('ja-JP');
+      }
+
+      function round(n) {
+        return Math.round(n);
+      }
+
+      function assertRequiredElements() {
+        const required = ['salesRange', 'profitRange', 'salesValue', 'profitValue', 'resetBtn', 'animateBtn'];
+        const missing = required.filter((key) => !ids[key]);
+        if (missing.length > 0) {
+          throw new Error(`必須要素が不足しています: ${missing.join(', ')}`);
+        }
+      }
+
+      function getVariableRatioTotal() {
+        const totalVar = Object.values(base.variable).reduce((a, b) => a + b, 0);
+        return totalVar / base.sales;
+      }
+
+      function getFixedTotal() {
+        return Object.values(base.fixed).reduce((a, b) => a + b, 0);
+      }
+
+      function calcBySales(sales) {
+        const ratio = sales / base.sales;
+        const variable = {
+          shohin: round(base.variable.shohin * ratio),
+          zairyo: round(base.variable.zairyo * ratio),
+          gaichu: round(base.variable.gaichu * ratio),
+          shomohin: round(base.variable.shomohin * ratio)
+        };
+        const fixed = { ...base.fixed };
+        const varTotal = Object.values(variable).reduce((a, b) => a + b, 0);
+        const cm = sales - varTotal;
+        const fixedTotal = Object.values(fixed).reduce((a, b) => a + b, 0);
+        const op = cm - fixedTotal;
+
+        const seido = {
+          sales,
+          shohin: variable.shohin,
+          zairyo: variable.zairyo,
+          genkaJinken: fixed.genkaJinken,
+          gaichu: variable.gaichu,
+          genkaShokyaku: fixed.genkaShokyaku,
+          shomohin: variable.shomohin,
+          shuzen: base.seidoOther.shuzen,
+          cogs: variable.shohin + variable.zairyo + fixed.genkaJinken + variable.gaichu + fixed.genkaShokyaku + variable.shomohin + base.seidoOther.shuzen,
+          keihiJinken: fixed.keihiJinken,
+          hanbai: fixed.hanbai,
+          keihiShokyaku: fixed.keihiShokyaku,
+          sonotaKeihi: base.seidoOther.sonotaKeihi
+        };
+        seido.gp = seido.sales - seido.cogs;
+        seido.sga = seido.keihiJinken + seido.hanbai + seido.keihiShokyaku + seido.sonotaKeihi;
+        seido.op = seido.gp - seido.sga;
+
+        return { sales, variable, fixed, varTotal, cm, fixedTotal, op, seido };
+      }
+
+      function calcByProfit(targetProfit) {
+        const ratio = getVariableRatioTotal();
+        const fixedTotal = getFixedTotal();
+        const neededSales = round((targetProfit + fixedTotal) / (1 - ratio));
+        return calcBySales(neededSales);
+      }
+
+      const highlightTimers = new Map();
+      let previousRendered = null;
+      let activeDriver = 'sales';
+      let animTimer = null;
+
+      function setRowHighlight(el) {
+        const row = el ? el.closest('tr') : null;
+        if (!row) return;
+        row.classList.add('changed');
+        if (highlightTimers.has(row)) {
+          clearTimeout(highlightTimers.get(row));
+        }
+        const timer = window.setTimeout(() => {
+          row.classList.remove('changed');
+          highlightTimers.delete(row);
+        }, 700);
+        highlightTimers.set(row, timer);
+      }
+
+      function setText(id, value, snapshot) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const formatted = fmt(value);
+        el.textContent = formatted;
+        snapshot[id] = formatted;
+
+        if (previousRendered && previousRendered[id] !== undefined && previousRendered[id] !== formatted) {
+          setRowHighlight(el);
+        }
+      }
+
+      function setPct(id, numerator, denominator, snapshot) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const pct = denominator === 0 ? '0.0%' : `${(numerator / denominator * 100).toFixed(1)}%`;
+        el.textContent = pct;
+        snapshot[id] = pct;
+
+        if (previousRendered && previousRendered[id] !== undefined && previousRendered[id] !== pct) {
+          setRowHighlight(el);
+        }
+      }
+
+      function render(data) {
+        ids.salesValue.textContent = fmt(data.sales);
+        ids.profitValue.textContent = fmt(data.op);
+
+        const snapshot = {};
+
+        setText('l-sales', data.seido.sales, snapshot);
+        setText('l-shohin', data.seido.shohin, snapshot);
+        setText('l-zairyo', data.seido.zairyo, snapshot);
+        setText('l-genka-jinken', data.seido.genkaJinken, snapshot);
+        setText('l-gaichu', data.seido.gaichu, snapshot);
+        setText('l-genka-shokyaku', data.seido.genkaShokyaku, snapshot);
+        setText('l-shomohin', data.seido.shomohin, snapshot);
+        setText('l-shuzen', data.seido.shuzen, snapshot);
+        setText('l-cogs', data.seido.cogs, snapshot);
+        setText('l-gp', data.seido.gp, snapshot);
+        setText('l-keihi-jinken', data.seido.keihiJinken, snapshot);
+        setText('l-hanbai', data.seido.hanbai, snapshot);
+        setText('l-keihi-shokyaku', data.seido.keihiShokyaku, snapshot);
+        setText('l-sonota-keihi', data.seido.sonotaKeihi, snapshot);
+        setText('l-sga', data.seido.sga, snapshot);
+        setText('l-op', data.seido.op, snapshot);
+        setPct('l-gp-pct', data.seido.gp, data.seido.sales, snapshot);
+        setPct('l-op-pct', data.seido.op, data.seido.sales, snapshot);
+
+        setText('r-sales', data.sales, snapshot);
+        setText('r-shohin', data.variable.shohin, snapshot);
+        setText('r-zairyo', data.variable.zairyo, snapshot);
+        setText('r-gaichu', data.variable.gaichu, snapshot);
+        setText('r-shomohin', data.variable.shomohin, snapshot);
+        setText('r-var', data.varTotal, snapshot);
+        setText('r-cm', data.cm, snapshot);
+        setText('r-genka-jinken', data.fixed.genkaJinken, snapshot);
+        setText('r-keihi-jinken', data.fixed.keihiJinken, snapshot);
+        setText('r-hanbai', data.fixed.hanbai, snapshot);
+        setText('r-genka-shokyaku', data.fixed.genkaShokyaku, snapshot);
+        setText('r-keihi-shokyaku', data.fixed.keihiShokyaku, snapshot);
+        setText('r-sonota-fixed', data.fixed.sonotaFixed, snapshot);
+        setText('r-fixed', data.fixedTotal, snapshot);
+        setText('r-op', data.op, snapshot);
+        setPct('r-cm-pct', data.cm, data.sales, snapshot);
+        setPct('r-op-pct', data.op, data.sales, snapshot);
+
+        ids.salesRange.value = String(data.sales);
+        ids.profitRange.value = String(data.op);
+        previousRendered = snapshot;
+      }
+
+      function getActiveData() {
+        return activeDriver === 'profit'
+          ? calcByProfit(Number(ids.profitRange.value))
+          : calcBySales(Number(ids.salesRange.value));
+      }
+
+      function clearActive() {
+        document.querySelectorAll('.item-row.active').forEach((el) => el.classList.remove('active'));
+      }
+
+      function setActive(link) {
+        clearActive();
+        document.querySelectorAll(`.item-row[data-link="${link}"]`).forEach((el) => el.classList.add('active'));
+      }
+
+      function bindHover() {
+        document.querySelectorAll('.linkable').forEach((row) => {
+          row.addEventListener('mouseenter', () => setActive(row.dataset.link));
+          row.addEventListener('mouseleave', clearActive);
+        });
+      }
+
+      function update() {
+        render(getActiveData());
+      }
+
+      function stopAnimation() {
+        if (!animTimer) return;
+        clearInterval(animTimer);
+        animTimer = null;
+        ids.animateBtn.textContent = '売上を自動で動かす';
+      }
+
+      function bindEvents() {
+        ids.salesRange.addEventListener('input', () => {
+          activeDriver = 'sales';
+          stopAnimation();
+          update();
+        });
+
+        ids.profitRange.addEventListener('input', () => {
+          activeDriver = 'profit';
+          stopAnimation();
+          update();
+        });
+
+        ids.resetBtn.addEventListener('click', () => {
+          stopAnimation();
+          activeDriver = 'sales';
+          ids.salesRange.value = String(base.sales);
+          ids.profitRange.value = String(calcBySales(base.sales).op);
+          update();
+        });
+
+        ids.animateBtn.addEventListener('click', () => {
+          if (animTimer) {
+            stopAnimation();
+            return;
+          }
+
+          activeDriver = 'sales';
+          let current = Number(ids.salesRange.value);
+          let dir = 1;
+          animTimer = window.setInterval(() => {
+            current += dir * 3000;
+            if (current >= Number(ids.salesRange.max)) {
+              current = Number(ids.salesRange.max);
+              dir = -1;
+            }
+            if (current <= Number(ids.salesRange.min)) {
+              current = Number(ids.salesRange.min);
+              dir = 1;
+            }
+            ids.salesRange.value = String(current);
+            update();
+          }, 120);
+          ids.animateBtn.textContent = '自動再生を停止';
+        });
+      }
+
+      function runTests() {
+        console.assert(getFixedTotal() === 110144, '固定費合計のテストに失敗');
+        console.assert(round(getVariableRatioTotal() * base.sales) === 146299, '変動費合計のテストに失敗');
+
+        const initial = calcBySales(base.sales);
+        console.assert(initial.op === 32879, '初期経常利益のテストに失敗');
+        console.assert(initial.varTotal === 146299, '初期変動費のテストに失敗');
+        console.assert(initial.seido.cogs === 204297, '初期売上原価のテストに失敗');
+        console.assert(initial.seido.sga === 52146, '初期販管費のテストに失敗');
+        console.assert(((initial.seido.gp / initial.sales) * 100).toFixed(1) === '29.4', '売上総利益率のテストに失敗');
+        console.assert(((initial.cm / initial.sales) * 100).toFixed(1) === '49.4', '限界利益率のテストに失敗');
+        console.assert(((initial.op / initial.sales) * 100).toFixed(1) === '11.4', '経常利益率のテストに失敗');
+
+        const profitDriven = calcByProfit(32879);
+        console.assert(profitDriven.sales === base.sales, '利益逆算の初期値テストに失敗');
+
+        const lowSales = calcBySales(100000);
+        console.assert(lowSales.fixedTotal === 110144, '固定費一定のテストに失敗');
+        console.assert(lowSales.sales - lowSales.varTotal - lowSales.fixedTotal === lowSales.op, '利益計算式のテストに失敗');
+      }
+
+      function init() {
+        assertRequiredElements();
+        bindHover();
+        bindEvents();
+        runTests();
+        update();
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init, { once: true });
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>
