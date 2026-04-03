@@ -125,7 +125,11 @@
       grid-template-columns: 1fr 1fr;
       gap: 18px;
       padding: 14px 16px 16px;
-      align-items: start;
+      align-items: stretch;
+    }
+
+    .board-col {
+      display: flex;
     }
 
     .board-block-title {
@@ -142,6 +146,8 @@
       border-radius: 12px;
       padding: 18px 20px 16px;
       min-height: 620px;
+      height: 100%;
+      width: 100%;
     }
 
     .pl.right {
