@@ -69,10 +69,8 @@
       font-weight: 700;
     }
 
-    .value-chip {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+    .value-input {
+      width: 100%;
       min-height: 38px;
       padding: 0 12px;
       border-radius: 999px;
@@ -81,6 +79,14 @@
       font-weight: 800;
       font-variant-numeric: tabular-nums;
       border: 1px solid #c9e2f3;
+      outline: none;
+      font-size: 16px;
+      text-align: right;
+    }
+
+    .value-input:focus {
+      border-color: #86bde2;
+      box-shadow: 0 0 0 3px rgba(67, 141, 197, .2);
     }
 
     input[type="range"] {
@@ -383,13 +389,13 @@
       <div class="toolbar-grid">
         <div class="control">
           <label for="salesRange">売上高（千円）</label>
-          <div class="value-chip" id="salesValue">289,322</div>
+          <input id="salesValue" class="value-input" type="text" inputmode="numeric" value="289,322" />
           <input id="salesRange" type="range" min="100000" max="500000" step="1000" value="289322" />
         </div>
 
         <div class="control">
           <label for="profitRange">目標経常利益（千円）</label>
-          <div class="value-chip" id="profitValue">32,879</div>
+          <input id="profitValue" class="value-input" type="text" inputmode="numeric" value="32,879" />
           <input id="profitRange" type="range" min="-30000" max="120000" step="1000" value="32879" />
         </div>
       </div>
@@ -559,6 +565,24 @@
         return Math.round(n).toLocaleString('ja-JP');
       }
 
+      function parseIntegerInput(raw, allowNegative = false) {
+        if (typeof raw !== 'string') return { display: '', value: null };
+        const trimmed = raw.trim();
+        const isNegative = allowNegative && trimmed.startsWith('-');
+        const digits = trimmed.replace(/[^\d]/g, '');
+        if (!digits) {
+          return { display: isNegative ? '-' : '', value: null };
+        }
+        const num = Number(`${isNegative ? '-' : ''}${digits}`);
+        return { display: fmt(num), value: num };
+      }
+
+      function clampToRange(value, rangeEl) {
+        const min = Number(rangeEl.min);
+        const max = Number(rangeEl.max);
+        return Math.max(min, Math.min(max, value));
+      }
+
       function round(n) {
         return Math.round(n);
       }
@@ -683,8 +707,8 @@
       }
 
       function render(data) {
-        ids.salesValue.textContent = fmt(data.sales);
-        ids.profitValue.textContent = fmt(data.op);
+        ids.salesValue.value = fmt(data.sales);
+        ids.profitValue.value = fmt(data.op);
 
         const snapshot = {};
 
@@ -782,6 +806,30 @@
           stopAnimation();
           update();
         });
+
+        ids.salesValue.addEventListener('input', () => {
+          const parsed = parseIntegerInput(ids.salesValue.value, false);
+          ids.salesValue.value = parsed.display;
+          if (parsed.value === null) return;
+          activeDriver = 'sales';
+          stopAnimation();
+          ids.salesRange.value = String(clampToRange(parsed.value, ids.salesRange));
+          update();
+        });
+
+        ids.salesValue.addEventListener('blur', () => update());
+
+        ids.profitValue.addEventListener('input', () => {
+          const parsed = parseIntegerInput(ids.profitValue.value, true);
+          ids.profitValue.value = parsed.display;
+          if (parsed.value === null) return;
+          activeDriver = 'profit';
+          stopAnimation();
+          ids.profitRange.value = String(clampToRange(parsed.value, ids.profitRange));
+          update();
+        });
+
+        ids.profitValue.addEventListener('blur', () => update());
 
         ids.resetBtn.addEventListener('click', () => {
           stopAnimation();
