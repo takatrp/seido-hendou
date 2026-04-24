@@ -89,6 +89,15 @@
       box-shadow: 0 0 0 3px rgba(67, 141, 197, .2);
     }
 
+    .subtotal-label {
+      display: inline-block;
+      margin-right: 8px;
+      color: #5f6f7d;
+      font-size: 15px;
+      font-weight: 700;
+      vertical-align: middle;
+    }
+
     input[type="range"] {
       width: 100%;
       accent-color: var(--blue);
@@ -395,7 +404,7 @@
 
         <div class="control">
           <label for="profitRange">目標経常利益（千円）</label>
-          <input id="profitValue" class="value-input" type="text" inputmode="numeric" value="32,879" />
+          <input id="profitValue" class="value-input" type="text" inputmode="text" value="32,879" />
           <input id="profitRange" type="range" min="-30000" max="120000" step="1000" value="32879" />
         </div>
       </div>
@@ -479,7 +488,7 @@
                 <tr class="item-row linkable" data-link="gaichu"><td></td><td class="name blue">外注費</td><td class="amt blue" id="r-gaichu">82,905</td></tr>
                 <tr class="item-row linkable" data-link="shomohin"><td></td><td class="name blue">消耗品費</td><td class="amt blue" id="r-shomohin">1,544</td></tr>
                 <tr class="section-total">
-                  <td></td><td></td><td class="amt"><span class="total-line blue" id="r-var">146,299</span></td>
+                  <td></td><td></td><td class="amt"><span class="subtotal-label">変動費計</span><span class="total-line blue" id="r-var">146,299</span></td>
                 </tr>
 
                 <tr>
@@ -497,7 +506,7 @@
                 <tr class="item-row linkable" data-link="keihi-shokyaku"><td></td><td class="name">償却費（経費）</td><td class="amt" id="r-keihi-shokyaku">2,048</td></tr>
                 <tr class="item-row linkable" data-link="sonota-fixed"><td></td><td class="name">その他固定費</td><td class="amt" id="r-sonota-fixed">24,478</td></tr>
                 <tr class="section-total">
-                  <td></td><td></td><td class="amt"><span class="total-line" id="r-fixed">110,144</span></td>
+                  <td></td><td></td><td class="amt"><span class="subtotal-label">固定費計</span><span class="total-line" id="r-fixed">110,144</span></td>
                 </tr>
 
                 <tr>
@@ -567,7 +576,8 @@
 
       function parseIntegerInput(raw, allowNegative = false) {
         if (typeof raw !== 'string') return { display: '', value: null };
-        const trimmed = raw.trim();
+        const normalized = raw.replace(/[−ー－]/g, '-');
+        const trimmed = normalized.trim();
         const isNegative = allowNegative && trimmed.startsWith('-');
         const digits = trimmed.replace(/[^\d]/g, '');
         if (!digits) {
@@ -801,6 +811,18 @@
       }
 
       function bindEvents() {
+        function commitTypedValue(inputEl, rangeEl, allowNegative, driver) {
+          const parsed = parseIntegerInput(inputEl.value, allowNegative);
+          if (parsed.value === null) {
+            update();
+            return;
+          }
+          activeDriver = driver;
+          stopAnimation();
+          rangeEl.value = String(clampToRange(parsed.value, rangeEl));
+          update();
+        }
+
         ids.salesRange.addEventListener('input', () => {
           activeDriver = 'sales';
           stopAnimation();
@@ -824,15 +846,11 @@
           update();
         });
 
-        ids.salesValue.addEventListener('blur', () => {
-          const parsed = parseIntegerInput(ids.salesValue.value, false);
-          if (parsed.value === null) {
-            update();
-            return;
-          }
-          activeDriver = 'sales';
-          ids.salesRange.value = String(clampToRange(parsed.value, ids.salesRange));
-          update();
+        ids.salesValue.addEventListener('blur', () => commitTypedValue(ids.salesValue, ids.salesRange, false, 'sales'));
+        ids.salesValue.addEventListener('keydown', (e) => {
+          if (e.key !== 'Enter') return;
+          commitTypedValue(ids.salesValue, ids.salesRange, false, 'sales');
+          ids.salesValue.blur();
         });
 
         ids.profitValue.addEventListener('input', () => {
@@ -846,15 +864,11 @@
           update();
         });
 
-        ids.profitValue.addEventListener('blur', () => {
-          const parsed = parseIntegerInput(ids.profitValue.value, true);
-          if (parsed.value === null) {
-            update();
-            return;
-          }
-          activeDriver = 'profit';
-          ids.profitRange.value = String(clampToRange(parsed.value, ids.profitRange));
-          update();
+        ids.profitValue.addEventListener('blur', () => commitTypedValue(ids.profitValue, ids.profitRange, true, 'profit'));
+        ids.profitValue.addEventListener('keydown', (e) => {
+          if (e.key !== 'Enter') return;
+          commitTypedValue(ids.profitValue, ids.profitRange, true, 'profit');
+          ids.profitValue.blur();
         });
 
         ids.resetBtn.addEventListener('click', () => {
