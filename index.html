@@ -69,10 +69,8 @@
       font-weight: 700;
     }
 
-    .value-chip {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+    .value-input {
+      width: 100%;
       min-height: 38px;
       padding: 0 12px;
       border-radius: 999px;
@@ -81,6 +79,23 @@
       font-weight: 800;
       font-variant-numeric: tabular-nums;
       border: 1px solid #c9e2f3;
+      outline: none;
+      font-size: 16px;
+      text-align: right;
+    }
+
+    .value-input:focus {
+      border-color: #86bde2;
+      box-shadow: 0 0 0 3px rgba(67, 141, 197, .2);
+    }
+
+    .subtotal-label {
+      display: inline-block;
+      margin-right: 8px;
+      color: #5f6f7d;
+      font-size: 15px;
+      font-weight: 700;
+      vertical-align: middle;
     }
 
     input[type="range"] {
@@ -247,11 +262,22 @@
 
     .pl-table tr.changed td.roman,
     .pl-table tr.changed td.name,
-    .pl-table tr.changed td.amt {
+    .pl-table tr.changed td.amt,
+    .pl-table tr.changed td.pct {
       background: rgba(255, 238, 121, .45);
       box-shadow: 0 0 0 6px rgba(255, 238, 121, .18);
       border-radius: 8px;
       transition: background-color .18s ease, box-shadow .18s ease;
+    }
+
+    .pl-table tr.changed td.pct.cm-focus {
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .pl-table tr.changed td.pct.cm-focus.active {
+      background: #fff8f8;
+      box-shadow: none;
     }
 
     .pl-table tr.changed .total-line {
@@ -313,6 +339,19 @@
     .dot.yellow { background: rgba(255, 200, 0, .9); }
     .dot.red { background: var(--red); }
 
+    .cm-focus {
+      border: 3px solid transparent;
+      border-radius: 8px;
+      padding: 3px 8px;
+      font-weight: 900;
+      transition: border-color .18s ease, background-color .18s ease;
+    }
+
+    .cm-focus.active {
+      border-color: var(--red);
+      background: #fff8f8;
+    }
+
     .footnote {
       margin-top: 14px;
       color: #5f6f7d;
@@ -359,13 +398,13 @@
       <div class="toolbar-grid">
         <div class="control">
           <label for="salesRange">売上高（千円）</label>
-          <div class="value-chip" id="salesValue">289,322</div>
+          <input id="salesValue" class="value-input" type="text" inputmode="numeric" value="289,322" />
           <input id="salesRange" type="range" min="100000" max="500000" step="1000" value="289322" />
         </div>
 
         <div class="control">
           <label for="profitRange">目標経常利益（千円）</label>
-          <div class="value-chip" id="profitValue">32,879</div>
+          <input id="profitValue" class="value-input" type="text" inputmode="text" value="32,879" />
           <input id="profitRange" type="range" min="-30000" max="120000" step="1000" value="32879" />
         </div>
       </div>
@@ -449,14 +488,14 @@
                 <tr class="item-row linkable" data-link="gaichu"><td></td><td class="name blue">外注費</td><td class="amt blue" id="r-gaichu">82,905</td></tr>
                 <tr class="item-row linkable" data-link="shomohin"><td></td><td class="name blue">消耗品費</td><td class="amt blue" id="r-shomohin">1,544</td></tr>
                 <tr class="section-total">
-                  <td></td><td></td><td class="amt"><span class="total-line blue" id="r-var">146,299</span></td>
+                  <td></td><td></td><td class="amt"><span class="subtotal-label">変動費計</span><span class="total-line blue" id="r-var">146,299</span></td>
                 </tr>
 
                 <tr>
                   <td class="roman red">III</td>
                   <td class="name red totallabel">限界利益</td>
                   <td class="amt"><span class="total-line red" id="r-cm">143,023</span></td>
-                  <td class="pct red" id="r-cm-pct">49.4%</td>
+                  <td class="pct red cm-focus" id="r-cm-pct">49.4%</td>
                 </tr>
 
                 <tr><td class="roman">IV</td><td class="name totallabel">固定費</td><td class="amt"></td></tr>
@@ -467,7 +506,7 @@
                 <tr class="item-row linkable" data-link="keihi-shokyaku"><td></td><td class="name">償却費（経費）</td><td class="amt" id="r-keihi-shokyaku">2,048</td></tr>
                 <tr class="item-row linkable" data-link="sonota-fixed"><td></td><td class="name">その他固定費</td><td class="amt" id="r-sonota-fixed">24,478</td></tr>
                 <tr class="section-total">
-                  <td></td><td></td><td class="amt"><span class="total-line" id="r-fixed">110,144</span></td>
+                  <td></td><td></td><td class="amt"><span class="subtotal-label">固定費計</span><span class="total-line" id="r-fixed">110,144</span></td>
                 </tr>
 
                 <tr>
@@ -486,6 +525,7 @@
     <div class="legend">
       <span><i class="dot yellow"></i>動いた科目は一時ハイライト</span>
       <span><i class="dot red"></i>赤字は売上・限界利益・経常利益など重要指標</span>
+      <span><i class="dot red"></i>限界利益率は売上を動かした時だけ赤枠で強調（変動項目ハイライトとは別表示）</span>
     </div>
 
     <p class="footnote">
@@ -532,6 +572,31 @@
 
       function fmt(n) {
         return Math.round(n).toLocaleString('ja-JP');
+      }
+
+      function parseIntegerInput(raw, allowNegative = false) {
+        if (typeof raw !== 'string') return { display: '', value: null };
+        const normalized = raw.replace(/[−ー－]/g, '-');
+        const trimmed = normalized.trim();
+        const isNegative = allowNegative && trimmed.startsWith('-');
+        const digits = trimmed.replace(/[^\d]/g, '');
+        if (!digits) {
+          return { display: isNegative ? '-' : '', value: null };
+        }
+        const num = Number(`${isNegative ? '-' : ''}${digits}`);
+        return { display: fmt(num), value: num };
+      }
+
+      function clampToRange(value, rangeEl) {
+        const min = Number(rangeEl.min);
+        const max = Number(rangeEl.max);
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function isInRange(value, rangeEl) {
+        const min = Number(rangeEl.min);
+        const max = Number(rangeEl.max);
+        return value >= min && value <= max;
       }
 
       function round(n) {
@@ -599,6 +664,7 @@
       }
 
       const highlightTimers = new Map();
+      let cmFocusTimer = null;
       let previousRendered = null;
       let activeDriver = 'sales';
       let animTimer = null;
@@ -636,14 +702,29 @@
         el.textContent = pct;
         snapshot[id] = pct;
 
+        if (id === 'r-cm-pct') return;
+
         if (previousRendered && previousRendered[id] !== undefined && previousRendered[id] !== pct) {
           setRowHighlight(el);
         }
       }
 
+      function flashCmFocus() {
+        const el = document.getElementById('r-cm-pct');
+        if (!el) return;
+        el.classList.add('active');
+        if (cmFocusTimer) {
+          clearTimeout(cmFocusTimer);
+        }
+        cmFocusTimer = window.setTimeout(() => {
+          el.classList.remove('active');
+          cmFocusTimer = null;
+        }, 700);
+      }
+
       function render(data) {
-        ids.salesValue.textContent = fmt(data.sales);
-        ids.profitValue.textContent = fmt(data.op);
+        ids.salesValue.value = fmt(data.sales);
+        ids.profitValue.value = fmt(data.op);
 
         const snapshot = {};
 
@@ -684,6 +765,13 @@
         setPct('r-cm-pct', data.cm, data.sales, snapshot);
         setPct('r-op-pct', data.op, data.sales, snapshot);
 
+        const salesChanged = previousRendered
+          && previousRendered['r-sales'] !== undefined
+          && previousRendered['r-sales'] !== snapshot['r-sales'];
+        if (activeDriver === 'sales' && salesChanged) {
+          flashCmFocus();
+        }
+
         ids.salesRange.value = String(data.sales);
         ids.profitRange.value = String(data.op);
         previousRendered = snapshot;
@@ -723,6 +811,18 @@
       }
 
       function bindEvents() {
+        function commitTypedValue(inputEl, rangeEl, allowNegative, driver) {
+          const parsed = parseIntegerInput(inputEl.value, allowNegative);
+          if (parsed.value === null) {
+            update();
+            return;
+          }
+          activeDriver = driver;
+          stopAnimation();
+          rangeEl.value = String(clampToRange(parsed.value, rangeEl));
+          update();
+        }
+
         ids.salesRange.addEventListener('input', () => {
           activeDriver = 'sales';
           stopAnimation();
@@ -733,6 +833,42 @@
           activeDriver = 'profit';
           stopAnimation();
           update();
+        });
+
+        ids.salesValue.addEventListener('input', () => {
+          const parsed = parseIntegerInput(ids.salesValue.value, false);
+          ids.salesValue.value = parsed.display;
+          if (parsed.value === null) return;
+          if (!isInRange(parsed.value, ids.salesRange)) return;
+          activeDriver = 'sales';
+          stopAnimation();
+          ids.salesRange.value = String(parsed.value);
+          update();
+        });
+
+        ids.salesValue.addEventListener('blur', () => commitTypedValue(ids.salesValue, ids.salesRange, false, 'sales'));
+        ids.salesValue.addEventListener('keydown', (e) => {
+          if (e.key !== 'Enter') return;
+          commitTypedValue(ids.salesValue, ids.salesRange, false, 'sales');
+          ids.salesValue.blur();
+        });
+
+        ids.profitValue.addEventListener('input', () => {
+          const parsed = parseIntegerInput(ids.profitValue.value, true);
+          ids.profitValue.value = parsed.display;
+          if (parsed.value === null) return;
+          if (!isInRange(parsed.value, ids.profitRange)) return;
+          activeDriver = 'profit';
+          stopAnimation();
+          ids.profitRange.value = String(parsed.value);
+          update();
+        });
+
+        ids.profitValue.addEventListener('blur', () => commitTypedValue(ids.profitValue, ids.profitRange, true, 'profit'));
+        ids.profitValue.addEventListener('keydown', (e) => {
+          if (e.key !== 'Enter') return;
+          commitTypedValue(ids.profitValue, ids.profitRange, true, 'profit');
+          ids.profitValue.blur();
         });
 
         ids.resetBtn.addEventListener('click', () => {
