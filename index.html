@@ -69,10 +69,8 @@
       font-weight: 700;
     }
 
-    .value-chip {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+    .value-input {
+      width: 100%;
       min-height: 38px;
       padding: 0 12px;
       border-radius: 999px;
@@ -81,6 +79,14 @@
       font-weight: 800;
       font-variant-numeric: tabular-nums;
       border: 1px solid #c9e2f3;
+      outline: none;
+      font-size: 16px;
+      text-align: right;
+    }
+
+    .value-input:focus {
+      border-color: #86bde2;
+      box-shadow: 0 0 0 3px rgba(67, 141, 197, .2);
     }
 
     input[type="range"] {
@@ -247,11 +253,22 @@
 
     .pl-table tr.changed td.roman,
     .pl-table tr.changed td.name,
-    .pl-table tr.changed td.amt {
+    .pl-table tr.changed td.amt,
+    .pl-table tr.changed td.pct {
       background: rgba(255, 238, 121, .45);
       box-shadow: 0 0 0 6px rgba(255, 238, 121, .18);
       border-radius: 8px;
       transition: background-color .18s ease, box-shadow .18s ease;
+    }
+
+    .pl-table tr.changed td.pct.cm-focus {
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .pl-table tr.changed td.pct.cm-focus.active {
+      background: #fff8f8;
+      box-shadow: none;
     }
 
     .pl-table tr.changed .total-line {
@@ -313,6 +330,19 @@
     .dot.yellow { background: rgba(255, 200, 0, .9); }
     .dot.red { background: var(--red); }
 
+    .cm-focus {
+      border: 3px solid transparent;
+      border-radius: 8px;
+      padding: 3px 8px;
+      font-weight: 900;
+      transition: border-color .18s ease, background-color .18s ease;
+    }
+
+    .cm-focus.active {
+      border-color: var(--red);
+      background: #fff8f8;
+    }
+
     .footnote {
       margin-top: 14px;
       color: #5f6f7d;
@@ -359,13 +389,13 @@
       <div class="toolbar-grid">
         <div class="control">
           <label for="salesRange">売上高（千円）</label>
-          <div class="value-chip" id="salesValue">289,322</div>
+          <input id="salesValue" class="value-input" type="text" inputmode="numeric" value="289,322" />
           <input id="salesRange" type="range" min="100000" max="500000" step="1000" value="289322" />
         </div>
 
         <div class="control">
           <label for="profitRange">目標経常利益（千円）</label>
-          <div class="value-chip" id="profitValue">32,879</div>
+          <input id="profitValue" class="value-input" type="text" inputmode="numeric" value="32,879" />
           <input id="profitRange" type="range" min="-30000" max="120000" step="1000" value="32879" />
         </div>
       </div>
@@ -456,7 +486,7 @@
                   <td class="roman red">III</td>
                   <td class="name red totallabel">限界利益</td>
                   <td class="amt"><span class="total-line red" id="r-cm">143,023</span></td>
-                  <td class="pct red" id="r-cm-pct">49.4%</td>
+                  <td class="pct red cm-focus" id="r-cm-pct">49.4%</td>
                 </tr>
 
                 <tr><td class="roman">IV</td><td class="name totallabel">固定費</td><td class="amt"></td></tr>
@@ -486,6 +516,7 @@
     <div class="legend">
       <span><i class="dot yellow"></i>動いた科目は一時ハイライト</span>
       <span><i class="dot red"></i>赤字は売上・限界利益・経常利益など重要指標</span>
+      <span><i class="dot red"></i>限界利益率は売上を動かした時だけ赤枠で強調（変動項目ハイライトとは別表示）</span>
     </div>
 
     <p class="footnote">
@@ -532,6 +563,24 @@
 
       function fmt(n) {
         return Math.round(n).toLocaleString('ja-JP');
+      }
+
+      function parseIntegerInput(raw, allowNegative = false) {
+        if (typeof raw !== 'string') return { display: '', value: null };
+        const trimmed = raw.trim();
+        const isNegative = allowNegative && trimmed.startsWith('-');
+        const digits = trimmed.replace(/[^\d]/g, '');
+        if (!digits) {
+          return { display: isNegative ? '-' : '', value: null };
+        }
+        const num = Number(`${isNegative ? '-' : ''}${digits}`);
+        return { display: fmt(num), value: num };
+      }
+
+      function clampToRange(value, rangeEl) {
+        const min = Number(rangeEl.min);
+        const max = Number(rangeEl.max);
+        return Math.max(min, Math.min(max, value));
       }
 
       function round(n) {
@@ -599,6 +648,7 @@
       }
 
       const highlightTimers = new Map();
+      let cmFocusTimer = null;
       let previousRendered = null;
       let activeDriver = 'sales';
       let animTimer = null;
@@ -636,14 +686,29 @@
         el.textContent = pct;
         snapshot[id] = pct;
 
+        if (id === 'r-cm-pct') return;
+
         if (previousRendered && previousRendered[id] !== undefined && previousRendered[id] !== pct) {
           setRowHighlight(el);
         }
       }
 
+      function flashCmFocus() {
+        const el = document.getElementById('r-cm-pct');
+        if (!el) return;
+        el.classList.add('active');
+        if (cmFocusTimer) {
+          clearTimeout(cmFocusTimer);
+        }
+        cmFocusTimer = window.setTimeout(() => {
+          el.classList.remove('active');
+          cmFocusTimer = null;
+        }, 700);
+      }
+
       function render(data) {
-        ids.salesValue.textContent = fmt(data.sales);
-        ids.profitValue.textContent = fmt(data.op);
+        ids.salesValue.value = fmt(data.sales);
+        ids.profitValue.value = fmt(data.op);
 
         const snapshot = {};
 
@@ -683,6 +748,13 @@
         setText('r-op', data.op, snapshot);
         setPct('r-cm-pct', data.cm, data.sales, snapshot);
         setPct('r-op-pct', data.op, data.sales, snapshot);
+
+        const salesChanged = previousRendered
+          && previousRendered['r-sales'] !== undefined
+          && previousRendered['r-sales'] !== snapshot['r-sales'];
+        if (activeDriver === 'sales' && salesChanged) {
+          flashCmFocus();
+        }
 
         ids.salesRange.value = String(data.sales);
         ids.profitRange.value = String(data.op);
@@ -734,6 +806,30 @@
           stopAnimation();
           update();
         });
+
+        ids.salesValue.addEventListener('input', () => {
+          const parsed = parseIntegerInput(ids.salesValue.value, false);
+          ids.salesValue.value = parsed.display;
+          if (parsed.value === null) return;
+          activeDriver = 'sales';
+          stopAnimation();
+          ids.salesRange.value = String(clampToRange(parsed.value, ids.salesRange));
+          update();
+        });
+
+        ids.salesValue.addEventListener('blur', () => update());
+
+        ids.profitValue.addEventListener('input', () => {
+          const parsed = parseIntegerInput(ids.profitValue.value, true);
+          ids.profitValue.value = parsed.display;
+          if (parsed.value === null) return;
+          activeDriver = 'profit';
+          stopAnimation();
+          ids.profitRange.value = String(clampToRange(parsed.value, ids.profitRange));
+          update();
+        });
+
+        ids.profitValue.addEventListener('blur', () => update());
 
         ids.resetBtn.addEventListener('click', () => {
           stopAnimation();
