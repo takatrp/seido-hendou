@@ -583,6 +583,12 @@
         return Math.max(min, Math.min(max, value));
       }
 
+      function isInRange(value, rangeEl) {
+        const min = Number(rangeEl.min);
+        const max = Number(rangeEl.max);
+        return value >= min && value <= max;
+      }
+
       function round(n) {
         return Math.round(n);
       }
@@ -811,25 +817,45 @@
           const parsed = parseIntegerInput(ids.salesValue.value, false);
           ids.salesValue.value = parsed.display;
           if (parsed.value === null) return;
+          if (!isInRange(parsed.value, ids.salesRange)) return;
           activeDriver = 'sales';
           stopAnimation();
-          ids.salesRange.value = String(clampToRange(parsed.value, ids.salesRange));
+          ids.salesRange.value = String(parsed.value);
           update();
         });
 
-        ids.salesValue.addEventListener('blur', () => update());
+        ids.salesValue.addEventListener('blur', () => {
+          const parsed = parseIntegerInput(ids.salesValue.value, false);
+          if (parsed.value === null) {
+            update();
+            return;
+          }
+          activeDriver = 'sales';
+          ids.salesRange.value = String(clampToRange(parsed.value, ids.salesRange));
+          update();
+        });
 
         ids.profitValue.addEventListener('input', () => {
           const parsed = parseIntegerInput(ids.profitValue.value, true);
           ids.profitValue.value = parsed.display;
           if (parsed.value === null) return;
+          if (!isInRange(parsed.value, ids.profitRange)) return;
           activeDriver = 'profit';
           stopAnimation();
-          ids.profitRange.value = String(clampToRange(parsed.value, ids.profitRange));
+          ids.profitRange.value = String(parsed.value);
           update();
         });
 
-        ids.profitValue.addEventListener('blur', () => update());
+        ids.profitValue.addEventListener('blur', () => {
+          const parsed = parseIntegerInput(ids.profitValue.value, true);
+          if (parsed.value === null) {
+            update();
+            return;
+          }
+          activeDriver = 'profit';
+          ids.profitRange.value = String(clampToRange(parsed.value, ids.profitRange));
+          update();
+        });
 
         ids.resetBtn.addEventListener('click', () => {
           stopAnimation();
