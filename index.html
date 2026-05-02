@@ -29,8 +29,16 @@
       padding: 14px;
     }
 
+    .title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+
     h1 {
-      margin: 0 0 6px;
+      margin: 0;
       font-size: clamp(18px, 1.55vw, 24px);
       color: #1f4f7d;
       line-height: 1.35;
@@ -42,6 +50,28 @@
       color: #51606f;
       line-height: 1.55;
       font-size: 13px;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 32px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: #e8f2fa;
+      color: #1f4f7d;
+      border: 1px solid #c9e2f3;
+      font-size: 12px;
+      font-weight: 800;
+      text-decoration: none;
+      white-space: nowrap;
+      box-shadow: none;
+      line-height: 1.2;
+    }
+
+    .back-btn:hover {
+      background: #dcecf7;
     }
 
     .canvas-wrap {
@@ -393,6 +423,13 @@
       line-height: 1.7;
     }
 
+    .bottom-back {
+      display: flex;
+      justify-content: center;
+      margin-top: 16px;
+      padding-bottom: 4px;
+    }
+
     @media (max-width: 1180px) {
       .boards {
         grid-template-columns: 1fr;
@@ -416,9 +453,19 @@
         padding: 8px;
       }
 
+      .title-row {
+        align-items: center;
+      }
+
       h1 {
         font-size: 17px;
-        margin-bottom: 4px;
+        margin-bottom: 0;
+      }
+
+      .back-btn {
+        min-height: 28px;
+        padding: 6px 9px;
+        font-size: 10.5px;
       }
 
       .lead {
@@ -541,6 +588,15 @@
     @media (max-width: 700px) and (orientation: portrait) {
       .wrap { padding: 10px; }
 
+      .title-row {
+        display: block;
+      }
+
+      .title-row .back-btn {
+        width: 100%;
+        margin-top: 8px;
+      }
+
       .boards {
         grid-template-columns: 1fr;
         gap: 10px;
@@ -596,6 +652,10 @@
         padding-left: 6px;
         padding-right: 6px;
       }
+
+      .bottom-back .back-btn {
+        width: 100%;
+      }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -607,7 +667,13 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>制度PLと変動損益計算書の違い</h1>
+    <div class="title-row">
+      <h1>制度PLと変動損益計算書の違い</h1>
+      <a class="back-btn" href="https://takatrp.github.io/hendou_PL/">
+        「ボールで学ぶ変動損益計算書」に戻る
+      </a>
+    </div>
+
     <p class="lead">
       制度会計ベースの損益計算書と、変動費・固定費に組み替えた変動損益計算書を横に並べ、
       売上高や目標経常利益を動かしたときに、どの科目がどう連動するかを一目で確認できるツールです。
@@ -755,6 +821,12 @@
     <p class="footnote">
       ※ 「修繕費他 12,113」は変動PL側では「その他固定費」に吸収させています（画像の 24,478 の内数の一部として扱う構成）。
     </p>
+
+    <div class="bottom-back">
+      <a class="back-btn" href="https://takatrp.github.io/hendou_PL/">
+        「ボールで学ぶ変動損益計算書」に戻る
+      </a>
+    </div>
   </div>
 
   <script>
