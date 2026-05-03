@@ -45,33 +45,37 @@
       font-weight: 900;
     }
 
-    .lead {
-      margin: 0 0 12px;
-      color: #51606f;
-      line-height: 1.55;
+    .device-note {
+      margin: 0 0 10px;
+      padding: 9px 12px;
+      border-radius: 12px;
+      background: #fff8e6;
+      border: 1px solid #f1d28a;
+      color: #5f4817;
       font-size: 13px;
+      font-weight: 800;
+      line-height: 1.55;
     }
 
-    .back-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 32px;
-      padding: 7px 12px;
-      border-radius: 999px;
+    .highlight-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 0 0 12px;
+    }
+
+    .highlight-btn {
+      border: 1px solid #c9e2f3;
       background: #e8f2fa;
       color: #1f4f7d;
-      border: 1px solid #c9e2f3;
-      font-size: 12px;
-      font-weight: 800;
-      text-decoration: none;
-      white-space: nowrap;
       box-shadow: none;
-      line-height: 1.2;
     }
 
-    .back-btn:hover {
-      background: #dcecf7;
+    .highlight-btn.active {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue);
+      box-shadow: var(--shadow);
     }
 
     .canvas-wrap {
@@ -191,7 +195,9 @@
     }
 
     .item-row.active .name,
-    .item-row.active .amt {
+    .item-row.active .amt,
+    .item-row.group-active .name,
+    .item-row.group-active .amt {
       background: rgba(255, 238, 121, .45);
       box-shadow: 0 0 0 6px rgba(255,238,121,.18);
       border-radius: 8px;
@@ -426,8 +432,35 @@
     .bottom-back {
       display: flex;
       justify-content: center;
-      margin-top: 16px;
-      padding-bottom: 4px;
+      margin-top: 18px;
+      padding: 10px 0 6px;
+    }
+
+    .bottom-back-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 11px 18px;
+      border-radius: 999px;
+      background: #1f4f7d;
+      color: #ffffff;
+      border: 1px solid #173f65;
+      font-size: 14px;
+      font-weight: 900;
+      text-decoration: none;
+      white-space: nowrap;
+      box-shadow: 0 10px 24px rgba(31, 79, 125, .28);
+      line-height: 1.2;
+    }
+
+    .bottom-back-btn:hover {
+      background: #173f65;
+      transform: translateY(-1px);
+    }
+
+    .bottom-back-btn:active {
+      transform: translateY(0);
     }
 
     @media (max-width: 1180px) {
@@ -462,15 +495,20 @@
         margin-bottom: 0;
       }
 
-      .back-btn {
-        min-height: 28px;
-        padding: 6px 9px;
-        font-size: 10.5px;
+      .device-note {
+        font-size: 11px;
+        padding: 7px 9px;
+        margin-bottom: 7px;
       }
 
-      .lead {
-        font-size: 11px;
+      .highlight-actions {
         margin-bottom: 8px;
+        gap: 6px;
+      }
+
+      .highlight-btn {
+        padding: 7px 8px;
+        font-size: 10.5px;
       }
 
       .boards {
@@ -592,9 +630,17 @@
         display: block;
       }
 
-      .title-row .back-btn {
+      .device-note {
+        font-size: 13px;
+      }
+
+      .highlight-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .highlight-btn {
         width: 100%;
-        margin-top: 8px;
       }
 
       .boards {
@@ -653,7 +699,7 @@
         padding-right: 6px;
       }
 
-      .bottom-back .back-btn {
+      .bottom-back .bottom-back-btn {
         width: 100%;
       }
     }
@@ -669,15 +715,16 @@
   <div class="wrap">
     <div class="title-row">
       <h1>制度PLと変動損益計算書の違い</h1>
-      <a class="back-btn" href="https://takatrp.github.io/hendou_PL/">
-        「ボールで学ぶ変動損益計算書」に戻る
-      </a>
     </div>
 
-    <p class="lead">
-      制度会計ベースの損益計算書と、変動費・固定費に組み替えた変動損益計算書を横に並べ、
-      売上高や目標経常利益を動かしたときに、どの科目がどう連動するかを一目で確認できるツールです。
+    <p class="device-note">
+      スマホの場合は横向きにすると、2種類の損益計算書を並べて表示できます
     </p>
+
+    <div class="highlight-actions" aria-label="科目ハイライト">
+      <button id="linkedItemsBtn" type="button" class="highlight-btn">売上に連動する科目を表示</button>
+      <button id="fixedItemsBtn" type="button" class="highlight-btn">売上に連動しない科目を表示</button>
+    </div>
 
     <div class="canvas-wrap" id="canvasWrap">
       <div class="boards">
@@ -702,7 +749,7 @@
                 <tr class="item-row linkable" data-link="gaichu"><td></td><td class="name">外注費</td><td class="amt" id="l-gaichu">82,905</td></tr>
                 <tr class="item-row linkable" data-link="genka-shokyaku"><td></td><td class="name">減価償却費</td><td class="amt" id="l-genka-shokyaku">1,765</td></tr>
                 <tr class="item-row linkable" data-link="shomohin"><td></td><td class="name">消耗品費</td><td class="amt" id="l-shomohin">1,544</td></tr>
-                <tr class="item-row"><td></td><td class="name">修繕費他</td><td class="amt" id="l-shuzen">12,113</td></tr>
+                <tr class="item-row linkable" data-link="sonota-fixed"><td></td><td class="name">修繕費他</td><td class="amt" id="l-shuzen">12,113</td></tr>
                 <tr class="section-total">
                   <td></td><td></td><td class="amt"><span class="total-line" id="l-cogs">204,297</span></td>
                 </tr>
@@ -823,8 +870,8 @@
     </p>
 
     <div class="bottom-back">
-      <a class="back-btn" href="https://takatrp.github.io/hendou_PL/">
-        「ボールで学ぶ変動損益計算書」に戻る
+      <a class="bottom-back-btn" href="https://takatrp.github.io/hendou_PL/">
+        ← 「ボールで学ぶ変動損益計算書」に戻る
       </a>
     </div>
   </div>
@@ -835,6 +882,11 @@
 
       const SALES_MIN = 0;
       const SALES_MAX = 500000;
+
+      const highlightGroups = {
+        variable: ['shohin', 'zairyo', 'gaichu', 'shomohin'],
+        fixed: ['genka-jinken', 'genka-shokyaku', 'keihi-jinken', 'hanbai', 'keihi-shokyaku', 'sonota-fixed']
+      };
 
       const base = {
         sales: 289322,
@@ -866,7 +918,9 @@
         canvasWrap: document.getElementById('canvasWrap'),
         resetBtn: document.getElementById('resetBtn'),
         animateBtn: document.getElementById('animateBtn'),
-        autoNote: document.getElementById('autoNote')
+        autoNote: document.getElementById('autoNote'),
+        linkedItemsBtn: document.getElementById('linkedItemsBtn'),
+        fixedItemsBtn: document.getElementById('fixedItemsBtn')
       };
 
       const state = {
@@ -874,7 +928,8 @@
         sales: base.sales,
         targetProfit: 32879,
         animTimer: null,
-        animationDirection: 1
+        animationDirection: 1,
+        highlightMode: null
       };
 
       const highlightTimers = new Map();
@@ -1048,7 +1103,9 @@
           'profitValue',
           'resetBtn',
           'animateBtn',
-          'autoNote'
+          'autoNote',
+          'linkedItemsBtn',
+          'fixedItemsBtn'
         ];
 
         const missing = required.filter((key) => !ids[key]);
@@ -1216,6 +1273,37 @@
         document.querySelectorAll(`.item-row[data-link="${link}"]`).forEach((el) => el.classList.add('active'));
       }
 
+      function clearGroupHighlights() {
+        document.querySelectorAll('.item-row.group-active').forEach((el) => el.classList.remove('group-active'));
+        ids.linkedItemsBtn.classList.remove('active');
+        ids.fixedItemsBtn.classList.remove('active');
+        state.highlightMode = null;
+      }
+
+      function applyGroupHighlight(mode) {
+        clearGroupHighlights();
+
+        const links = highlightGroups[mode] || [];
+        links.forEach((link) => {
+          document.querySelectorAll(`.item-row[data-link="${link}"]`).forEach((el) => {
+            el.classList.add('group-active');
+          });
+        });
+
+        state.highlightMode = mode;
+        ids.linkedItemsBtn.classList.toggle('active', mode === 'variable');
+        ids.fixedItemsBtn.classList.toggle('active', mode === 'fixed');
+      }
+
+      function toggleGroupHighlight(mode) {
+        if (state.highlightMode === mode) {
+          clearGroupHighlights();
+          return;
+        }
+
+        applyGroupHighlight(mode);
+      }
+
       function bindHover() {
         document.querySelectorAll('.linkable').forEach((row) => {
           row.addEventListener('mouseenter', () => setActive(row.dataset.link));
@@ -1234,9 +1322,6 @@
         state.animTimer = null;
         ids.animateBtn.textContent = '売上を自動で動かす';
         ids.animateBtn.classList.remove('is-running');
-
-        // カードは非表示にしない。
-        // 「一時停止→再生」の感覚を優先し、説明もそのまま残す。
       }
 
       function commitSalesInput() {
@@ -1266,6 +1351,14 @@
       }
 
       function bindEvents() {
+        ids.linkedItemsBtn.addEventListener('click', () => {
+          toggleGroupHighlight('variable');
+        });
+
+        ids.fixedItemsBtn.addEventListener('click', () => {
+          toggleGroupHighlight('fixed');
+        });
+
         ids.salesRange.addEventListener('input', () => {
           stopAnimation();
           state.activeDriver = 'sales';
@@ -1338,8 +1431,6 @@
 
           let current = clamp(Number(ids.salesRange.value), SALES_MIN, SALES_MAX);
 
-          // 端にいる場合だけ、進行方向を自然に補正する。
-          // 途中で停止した場合は、前回の方向をそのまま維持する。
           if (current >= SALES_MAX && state.animationDirection > 0) {
             state.animationDirection = -1;
           }
