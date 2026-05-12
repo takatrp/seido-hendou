@@ -65,10 +65,14 @@
     }
 
     .highlight-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       border: 1px solid #c9e2f3;
       background: #e8f2fa;
       color: #1f4f7d;
       box-shadow: none;
+      min-width: 220px;
     }
 
     .highlight-btn.active {
@@ -509,6 +513,7 @@
       .highlight-btn {
         padding: 7px 8px;
         font-size: 10.5px;
+        min-width: 190px;
       }
 
       .boards {
@@ -641,6 +646,7 @@
 
       .highlight-btn {
         width: 100%;
+        min-width: 0;
       }
 
       .boards {
@@ -1424,6 +1430,7 @@
             return;
           }
 
+          clearGroupHighlights();
           state.activeDriver = 'sales';
           showAutoNote();
           ids.animateBtn.textContent = '自動再生を停止';
